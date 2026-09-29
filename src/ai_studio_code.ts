@@ -1,9 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const rawUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SUPABASE_URL : undefined;
+const rawKey = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SUPABASE_ANON_KEY : undefined;
 
-export const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
+function sanitizeUrl(url?: string): string {
+  const fallback = 'https://yimmcqpekqodtqgzvwtk.supabase.co';
+  if (!url || typeof url !== 'string') return fallback;
+  const trimmed = url.trim().replace(/^['"]|['"]$/g, '');
+  if (!trimmed) return fallback;
+  if (!trimmed.includes('.') && !trimmed.startsWith('http')) return `https://${trimmed}.supabase.co`;
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return `https://${trimmed}`;
+  try {
+    const p = new URL(trimmed);
+    if (p.protocol === 'http:' || p.protocol === 'https:') return p.origin;
+  } catch (_) {}
+  return fallback;
+}
+
+const SUPABASE_URL = sanitizeUrl(rawUrl);
+const SUPABASE_ANON_KEY = rawKey && String(rawKey).trim().length > 10
+  ? String(rawKey).trim()
+  : 'sb_publishable_RVcdGk_gVYDw2bGv3xj9Zw_6ICAd9Ho';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
  * Dynamically resolves the OAuth redirect URL from the current browser origin.
